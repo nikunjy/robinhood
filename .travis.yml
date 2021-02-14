@@ -1,0 +1,6 @@
+language: go
+go_import_path: github.com/nikunjy/robinhood
+
+matrix:
+  allow_failures:
+    - go: tip
