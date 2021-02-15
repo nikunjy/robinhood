@@ -1,5 +1,8 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/nikunjy/robinhood.svg)](https://pkg.go.dev/github.com/nikunjy/robinhood)
-# This repo is just a fork. Please go check out the [original](https://github.com/andrewstuart/go-robinhood) instead 
+
+This repo is just a fork [of](https://github.com/andrewstuart/go-robinhood).
+I found some errors in the original and I started adding code to this one.
+
 # Robinhood the rich and feeding the poor, now automated
 
 > Even though robinhood makes me poor
