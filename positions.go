@@ -40,7 +40,7 @@ type LegPosition struct {
 	Position       string `json:"position"`
 	PositionType   string `json:"position_type"`
 	Option         string `json:"option"`
-	RatioQuantity  string `json:"ratio_quantity"`
+	RatioQuantity  int    `json:"ratio_quantity"`
 	ExpirationDate string `json:"expiration_date"`
 	StrikePrice    string `json:"strike_price"`
 	OptionType     string `json:"option_type"`
@@ -68,7 +68,7 @@ type PositionParams struct {
 func (p PositionParams) encode() string {
 	v := url.Values{}
 	if p.NonZero {
-		v.Set("nonzero", "true")
+		v.Set("nonzero", "True")
 	}
 	return v.Encode()
 }
@@ -87,7 +87,7 @@ func (c *Client) GetPositionsParams(ctx context.Context, p PositionParams) ([]Po
 	return r.Results, c.GetAndDecode(ctx, u.String(), &r)
 }
 
-// GetPositionsParams returns all the positions associated with a count, but
+// GetOptionPositionsParams returns all the positions associated with a count, but
 // passes the encoded PositionsParams object along to the RobinHood API as part
 // of the query string.
 func (c *Client) GetOptionPositionsParams(ctx context.Context, p PositionParams) ([]OptionPostion, error) {
@@ -96,7 +96,6 @@ func (c *Client) GetOptionPositionsParams(ctx context.Context, p PositionParams)
 		return nil, err
 	}
 	u.RawQuery = p.encode()
-
 	var r struct{ Results []OptionPostion }
 	return r.Results, c.GetAndDecode(ctx, u.String(), &r)
 }
