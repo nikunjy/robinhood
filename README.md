@@ -3,44 +3,57 @@
 This repo is just a fork [of](https://github.com/andrewstuart/go-robinhood).
 I found some errors in the original and I started adding code to this one.
 
-# Robinhood the rich and feeding the poor, now automated
+## Usage
+1. Please make sure you have MFA enabled on the robinhood account.
+2. Cache the oauth token and you can keep on reusing it. Golang oauth2 will auto refresh
+```
+func loginAttempt(
+	email string,
+	password string,
+	mfa string,
+) oauth2.TokenSource {
+	source := &robinhood.OAuth{
+		Username: email,
+		Password: password,
+	}
+	if mfa != "" {
+		fmt.Println("Using MFA", mfa)
+		source.MFA = mfa
+	}
+	cacher := &robinhood.CredsCacher{
+		Creds: source,
+		Path:  "./creds",
+	}
+	return cacher
+}
 
-> Even though robinhood makes me poor
+func doit() {
+	username := ""
+	password := ""
+	cli, err := robinhood.Dial(context.Background(), loginAttempt(username, password, ""))
+	switch err {
+	case nil:
+		break
+	default:
+		if robinhood.HasMissingMFA(err) {
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Enter MFA from SMS: ")
+			mfa, _ := reader.ReadString('\n')
+			cli, err = robinhood.Dial(context.Background(), loginAttempt(username, password, mfa))
+			if err != nil {
+				panic(err)
+			}
+		} else {
+			panic(err)
+		}
+		
+	}
 
-## Notice
-
-If you have used this library before, and use credential caching, you will need
-to remove any credential cache and rebuild if you experience errors.
-
-## General usage
-
-```go
-cli, err := robinhood.Dial(&robinhood.OAuth{
-  Username: "andrewstuart",
-  Password: "mypasswordissecure",
-})
-
-// err
-
-i, err := cli.GetInstrumentForSymbol("SPY")
-
-// err
-
-o, err := cli.Order(i, robinhood.OrderOpts{
-  Price: 100.0,
-  Side: robinhood.Buy,
-  Quantity: 1,
-})
-
-// err
-
-time.Sleep(5*time.Second) //Let me think about it some more...
-
-// Ah crap, I need to buy groceries.
-
-err := o.Cancel()
-
-if err != nil {
-  // Oh well
+	ctx := context.Background()
+	portfolios, err := cli.GetPortfolios(ctx)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(portfolios)
 }
 ```

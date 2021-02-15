@@ -23,6 +23,10 @@ type OAuth struct {
 // ErrMFARequired indicates the MFA was required but not provided.
 var ErrMFARequired = fmt.Errorf("Two Factor Auth code required and not supplied")
 
+func HasMissingMFA(err error) bool {
+	return strings.Contains(err.Error(), ErrMFARequired.Error())
+}
+
 // Token implements TokenSource
 func (p *OAuth) Token() (*oauth2.Token, error) {
 	cliID := p.ClientID
@@ -62,7 +66,6 @@ func (p *OAuth) Token() (*oauth2.Token, error) {
 		return nil, errors.Wrap(err, "could not post login")
 	}
 	defer res.Body.Close()
-
 	var o struct {
 		oauth2.Token
 		ExpiresIn   int    `json:"expires_in"`
@@ -74,12 +77,9 @@ func (p *OAuth) Token() (*oauth2.Token, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode token")
 	}
-
 	if o.MFARequired {
 		return nil, ErrMFARequired
 	}
-
 	o.Token.Expiry = time.Now().Add(time.Duration(o.ExpiresIn) * time.Second)
-
 	return &o.Token, nil
 }
