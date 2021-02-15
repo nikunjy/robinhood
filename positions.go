@@ -3,6 +3,7 @@ package robinhood
 import (
 	"context"
 	"net/url"
+	"time"
 )
 
 type Position struct {
@@ -19,9 +20,9 @@ type Position struct {
 
 type OptionPostion struct {
 	Chain                    string        `json:"chain"`
-	AverageOpenPrice         string        `json:"average_open_price"`
+	AverageOpenPrice         float64       `json:"average_open_price,string"`
 	Symbol                   string        `json:"symbol"`
-	Quantity                 string        `json:"quantity"`
+	Quantity                 float64       `json:"quantity,string"`
 	Direction                string        `json:"direction"`
 	IntradayDirection        string        `json:"intraday_direction"`
 	TradeValueMultiplier     string        `json:"trade_value_multiplier"`
@@ -29,24 +30,29 @@ type OptionPostion struct {
 	Strategy                 string        `json:"strategy"`
 	Legs                     []LegPosition `json:"legs"`
 	IntradayQuantity         string        `json:"intraday_quantity"`
-	UpdatedAt                string        `json:"updated_at"`
+	UpdatedAt                time.Time     `json:"updated_at,string"`
 	Id                       string        `json:"id"`
-	IntradayAverageOpenPrice string        `json:"intraday_average_open_price"`
-	CreatedAt                string        `json:"created_at"`
+	IntradayAverageOpenPrice float64       `json:"intraday_average_open_price,string"`
+	CreatedAt                time.Time     `json:"created_at,string"`
 }
+
+type PositionType string
+
+const (
+	Short PositionType = "short"
+	Long               = "long"
+)
 
 type LegPosition struct {
-	Id             string `json:"id"`
-	Position       string `json:"position"`
-	PositionType   string `json:"position_type"`
-	Option         string `json:"option"`
-	RatioQuantity  int    `json:"ratio_quantity"`
-	ExpirationDate string `json:"expiration_date"`
-	StrikePrice    string `json:"strike_price"`
-	OptionType     string `json:"option_type"`
+	Id             string       `json:"id"`
+	Position       string       `json:"position"`
+	PositionType   PositionType `json:"position_type"`
+	Option         string       `json:"option"`
+	RatioQuantity  int          `json:"ratio_quantity"`
+	ExpirationDate time.Time    `json:"expiration_date"`
+	StrikePrice    float64      `json:"strike_price,string"`
+	OptionType     string       `json:"option_type"`
 }
-
-type Unknown interface{}
 
 // GetPositions returns all the positions associated with an account.
 func (c *Client) GetOptionPositions(ctx context.Context) ([]OptionPostion, error) {

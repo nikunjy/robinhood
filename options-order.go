@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -87,14 +88,87 @@ func (c *Client) OrderOptions(ctx context.Context, q *OptionInstrument, o Option
 	return out, nil
 }
 
-// GetOptionsOrders returns all outstanding options orders
-func (c *Client) GetOptionsOrders(ctx context.Context) (json.RawMessage, error) {
-	var o json.RawMessage
-	err := c.GetAndDecode(ctx, EPOptions+"orders/", &o)
+type OptionOrder struct {
+	CancelURL        string    `json:"cancel_url"`
+	CanceledQuantity float64   `json:"canceled_quantity,string"`
+	CreatedAt        time.Time `json:"created_at,string"`
+	Direction        string    `json:"direction"`
+	ID               string    `json:"id"`
+	Legs             []struct {
+		Executions []struct {
+			ID             string
+			Price          float64   `json:"price,string"`
+			Quantity       float64   `json:"quantity,string"`
+			SettlementDate string    `json:"settlement_date"`
+			Timestamp      time.Time `json:"timestamp,string"`
+		} `json:"executions"`
+		ID             string  `json:"id"`
+		Instrument     string  `json:"option"`
+		PositionEffect string  `json:"position_effect"`
+		RatioQuantity  float64 `json:"ratio_quantity"`
+		Side           string  `json:"side"`
+	} `json:"legs"`
+	PendingQuantity   float64   `json:"pending_quantity,string"`
+	Premium           float64   `json:"premium,string"`
+	ProcessedPremium  float64   `json:"processed_premium,string"`
+	Price             float64   `json:"price,string"`
+	ProcessedQuantity float64   `json:"processed_quantity,string"`
+	Quantity          float64   `json:"quantity,string"`
+	RefID             string    `json:"ref_id"`
+	State             string    `json:"state"`
+	Trigger           string    `json:"trigger"`
+	Type              string    `json:"type"`
+	UpdatedAt         time.Time `json:"updated_at,string"`
+	ChainID           string    `json:"chain_id"`
+	ChainSymbol       string    `json:"chain_symbol"`
+	ClosingStrategy   string    `json:"closing_strategy"`
+}
+
+type OptionsOrdersIterator interface {
+	HasNext() bool
+	Next(ctx context.Context) ([]OptionOrder, error)
+}
+
+type optionsOrdersIterators struct {
+	c    *Client
+	next string
+}
+
+func (o *optionsOrdersIterators) HasNext() bool {
+	return o.next != ""
+}
+
+func (o *optionsOrdersIterators) Next(ctx context.Context) ([]OptionOrder, error) {
+	var tmp struct {
+		Results []OptionOrder
+		Next    string
+	}
+	err := o.c.GetAndDecode(ctx, o.next, &tmp)
 	if err != nil {
 		return nil, err
 	}
+	o.next = tmp.Next
+	return tmp.Results, nil
+}
 
-	return o, nil
+// NewOptionsOrdersIterator returns an iterator which will return all
+// the option orders ever seen.
+func (c *Client) NewOptionsOrdersIterator() OptionsOrdersIterator {
+	return &optionsOrdersIterators{
+		next: EPOptions + "orders/",
+		c:    c,
+	}
+}
 
+// GetOptionsOrders returns all outstanding options orders
+func (c *Client) GetOptionsOrders(ctx context.Context) ([]OptionOrder, error) {
+	var tmp struct {
+		Results []OptionOrder
+		Next    string
+	}
+	err := c.GetAndDecode(ctx, EPOptions+"orders/", &tmp)
+	if err != nil {
+		return nil, err
+	}
+	return tmp.Results, nil
 }
