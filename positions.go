@@ -2,9 +2,35 @@ package robinhood
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
+	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
+
+type CustomTime struct {
+	time.Time
+}
+
+func (c *CustomTime) MarshalJSON() ([]byte, error) {
+	if c == nil {
+		return nil, nil
+	}
+	return json.Marshal(c.Time)
+}
+
+func (c *CustomTime) UnmarshalJSON(data []byte) error {
+	str := string(data)
+	str = strings.Replace(str, `"`, "", -1)
+
+	if val, err := time.Parse("2006-01-02", str); err == nil {
+		c.Time = val
+		return nil
+	}
+	return errors.New("no time formats matched")
+}
 
 type Position struct {
 	Meta
@@ -49,7 +75,7 @@ type LegPosition struct {
 	PositionType   PositionType `json:"position_type"`
 	Option         string       `json:"option"`
 	RatioQuantity  int          `json:"ratio_quantity"`
-	ExpirationDate time.Time    `json:"expiration_date"`
+	ExpirationDate CustomTime   `json:"expiration_date"`
 	StrikePrice    float64      `json:"strike_price,string"`
 	OptionType     string       `json:"option_type"`
 }
@@ -103,5 +129,8 @@ func (c *Client) GetOptionPositionsParams(ctx context.Context, p PositionParams)
 	}
 	u.RawQuery = p.encode()
 	var r struct{ Results []OptionPostion }
-	return r.Results, c.GetAndDecode(ctx, u.String(), &r)
+	if err := c.GetAndDecode(ctx, u.String(), &r); err != nil {
+		return nil, errors.Wrap(err, "error getting and decoding options")
+	}
+	return r.Results, nil
 }

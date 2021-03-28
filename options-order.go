@@ -88,6 +88,13 @@ func (c *Client) OrderOptions(ctx context.Context, q *OptionInstrument, o Option
 	return out, nil
 }
 
+type OptionOrderState string
+
+const (
+	ORDER_STATE_FILLED    OptionOrderState = "filled"
+	ORDER_STATE_CANCELLED OptionOrderState = "cancelled"
+)
+
 type OptionOrder struct {
 	CancelURL        string    `json:"cancel_url"`
 	CanceledQuantity float64   `json:"canceled_quantity,string"`
@@ -108,20 +115,24 @@ type OptionOrder struct {
 		RatioQuantity  float64 `json:"ratio_quantity"`
 		Side           string  `json:"side"`
 	} `json:"legs"`
-	PendingQuantity   float64   `json:"pending_quantity,string"`
-	Premium           float64   `json:"premium,string"`
-	ProcessedPremium  float64   `json:"processed_premium,string"`
-	Price             float64   `json:"price,string"`
-	ProcessedQuantity float64   `json:"processed_quantity,string"`
-	Quantity          float64   `json:"quantity,string"`
-	RefID             string    `json:"ref_id"`
-	State             string    `json:"state"`
-	Trigger           string    `json:"trigger"`
-	Type              string    `json:"type"`
-	UpdatedAt         time.Time `json:"updated_at,string"`
-	ChainID           string    `json:"chain_id"`
-	ChainSymbol       string    `json:"chain_symbol"`
-	ClosingStrategy   string    `json:"closing_strategy"`
+	PendingQuantity   float64          `json:"pending_quantity,string"`
+	Premium           float64          `json:"premium,string"`
+	ProcessedPremium  float64          `json:"processed_premium,string"`
+	Price             float64          `json:"price,string"`
+	ProcessedQuantity float64          `json:"processed_quantity,string"`
+	Quantity          float64          `json:"quantity,string"`
+	RefID             string           `json:"ref_id"`
+	State             OptionOrderState `json:"state"`
+	Trigger           string           `json:"trigger"`
+	Type              string           `json:"type"`
+	UpdatedAt         time.Time        `json:"updated_at,string"`
+	ChainID           string           `json:"chain_id"`
+	ChainSymbol       string           `json:"chain_symbol"`
+	ClosingStrategy   string           `json:"closing_strategy"`
+}
+
+func (o OptionOrder) IsClosingOrder() bool {
+	return o.ClosingStrategy != ""
 }
 
 type OptionsOrdersIterator interface {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 )
 
@@ -42,6 +43,7 @@ type Client struct {
 	Token         string
 	Account       *Account
 	CryptoAccount *CryptoAccount
+	Debug         bool
 	*http.Client
 }
 
@@ -75,7 +77,6 @@ func (c *Client) GetAndDecode(ctx context.Context, url string, dest interface{})
 	if err != nil {
 		return err
 	}
-
 	return c.DoAndDecode(ctx, req, dest)
 }
 
@@ -112,8 +113,17 @@ func (c *Client) DoAndDecode(ctx context.Context, req *http.Request, dest interf
 		}
 		return e
 	}
-
-	return json.NewDecoder(res.Body).Decode(dest)
+	data := &bytes.Buffer{}
+	if _, err := io.Copy(data, res.Body); err != nil {
+		return errors.Wrap(err, "error copying data into buffer")
+	}
+	if err := json.Unmarshal(data.Bytes(), dest); err != nil {
+		if c.Debug {
+			fmt.Println(string(data.Bytes()))
+		}
+		return errors.Wrap(err, "error decoding the response")
+	}
+	return nil
 }
 
 // Meta holds metadata common to many RobinHood types.
