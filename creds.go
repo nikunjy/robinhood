@@ -37,9 +37,7 @@ func (c *CredsCacher) Token() (*oauth2.Token, error) {
 	if c.Path == "" {
 		c.Path = defaultPath
 	}
-
 	mustLogin := false
-
 	err := os.MkdirAll(path.Dir(c.Path), 0750)
 	if err != nil {
 		return nil, fmt.Errorf("error creating path for token: %s", err)
@@ -62,8 +60,13 @@ func (c *CredsCacher) Token() (*oauth2.Token, error) {
 
 		if len(bs) > 0 {
 			var o oauth2.Token
-			if err := json.Unmarshal(bs, &o); err == nil && o.Valid() {
-				return &o, err
+			// Even if the token is expired. The http client will take
+			// care of renewing it.
+			if err := json.Unmarshal(bs, &o); err == nil {
+				// Make sure the creds passed have access token and refresh token
+				if o.AccessToken != "" && o.RefreshToken != "" {
+					return &o, err
+				}
 			}
 		}
 	}
@@ -78,7 +81,6 @@ func (c *CredsCacher) Token() (*oauth2.Token, error) {
 		return nil, err
 	}
 	defer f.Close()
-
 	err = json.NewEncoder(f).Encode(tok)
 	return tok, err
 }

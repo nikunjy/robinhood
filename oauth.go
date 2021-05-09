@@ -3,6 +3,7 @@ package robinhood
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -72,8 +73,11 @@ func (p *OAuth) Token() (*oauth2.Token, error) {
 		MFARequired bool   `json:"mfa_required"`
 		MFAType     string `json:"mfa_type"`
 	}
-
-	err = json.NewDecoder(res.Body).Decode(&o)
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &o)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode token")
 	}

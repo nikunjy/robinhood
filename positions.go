@@ -80,14 +80,48 @@ type LegPosition struct {
 	OptionType     string       `json:"option_type"`
 }
 
-// GetPositions returns all the positions associated with an account.
-func (c *Client) GetOptionPositions(ctx context.Context) ([]OptionPostion, error) {
-	return c.GetOptionPositionsParams(ctx, PositionParams{NonZero: true})
+type getPositionConfig struct {
+	nonZero bool
+}
+
+func (c *getPositionConfig) params() PositionParams {
+	params := PositionParams{}
+	if c.nonZero {
+		params.NonZero = true
+	}
+	return params
+}
+
+func newDefaultOptionsConfig() *getPositionConfig {
+	return &getPositionConfig{
+		nonZero: false,
+	}
+}
+
+type GetPositionsParamsOptions func(*getPositionConfig)
+
+func ExcludeZeroPositions() GetPositionsParamsOptions {
+	return func(cfg *getPositionConfig) {
+		cfg.nonZero = true
+	}
 }
 
 // GetPositions returns all the positions associated with an account.
-func (c *Client) GetPositions(ctx context.Context) ([]Position, error) {
-	return c.GetPositionsParams(ctx, PositionParams{NonZero: true})
+func (c *Client) GetOptionPositions(ctx context.Context, opts ...GetPositionsParamsOptions) ([]OptionPostion, error) {
+	cfg := newDefaultOptionsConfig()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return c.GetOptionPositionsParams(ctx, cfg.params())
+}
+
+// GetPositions returns all the positions associated with an account.
+func (c *Client) GetPositions(ctx context.Context, opts ...GetPositionsParamsOptions) ([]Position, error) {
+	cfg := newDefaultOptionsConfig()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	return c.GetPositionsParams(ctx, cfg.params())
 }
 
 // PositionParams encapsulates parameters known to the RobinHood positions API

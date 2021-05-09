@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -26,6 +28,7 @@ func loginAttempt(
 	email string,
 	password string,
 	mfa string,
+	path string,
 ) oauth2.TokenSource {
 	source := &robinhood.OAuth{
 		Username: email,
@@ -37,20 +40,31 @@ func loginAttempt(
 	}
 	cacher := &robinhood.CredsCacher{
 		Creds: source,
-		Path:  "./creds",
+		Path:  path,
 	}
 	return cacher
 }
 
 func doit() {
-	username := ""
-	password := ""
-	if len(os.Args) > 2 {
-		username = os.Args[1]
-		password = os.Args[2]
-	}
+	userName := flag.String("user", "", "username")
+	password := flag.String("password", "", "Password for the account")
+	var path string
+	flag.StringVar(&path, "path", "", "Path for creds to be stored")
+	flag.Parse()
 
-	cli, err := robinhood.Dial(context.Background(), loginAttempt(username, password, ""))
+	if path == "" {
+		if *userName == "" || *password == "" {
+			log.Fatal("Need to provide either creds file or username/password")
+		}
+		f, err := ioutil.TempFile(os.TempDir(), "creds")
+		if err != nil {
+			log.Fatalf("Error creating tmp file %v", err)
+		}
+		path = f.Name()
+		f.Close()
+		log.Printf("Picking creds path %s\n", path)
+	}
+	cli, err := robinhood.Dial(context.Background(), loginAttempt(*userName, *password, "", path))
 	switch err {
 	case nil:
 		break
@@ -59,17 +73,17 @@ func doit() {
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("Enter MFA from SMS: ")
 			mfa, _ := reader.ReadString('\n')
-			cli, err = robinhood.Dial(context.Background(), loginAttempt(username, password, mfa))
+			cli, err = robinhood.Dial(context.Background(), loginAttempt(*userName, *password, mfa, path))
 			if err != nil {
-				panic(err)
+				log.Fatalf("Error dialing robinhood %v", err)
 			}
 		} else {
-			panic(err)
+			log.Fatalf("Error getting creds from robinhood %v", err)
 		}
 	}
+
 	cli.Debug = true
 	ctx := context.Background()
-
 	portfolios, err := cli.GetPortfolios(ctx)
 	if err != nil {
 		panic(err)
@@ -81,7 +95,6 @@ func doit() {
 		log.Fatal("Error getting options ", err)
 	}
 	iprintJSON(options)
-
 	it := cli.NewOptionsOrdersIterator()
 	for it.HasNext() {
 		val, err := it.Next(ctx)
@@ -90,7 +103,7 @@ func doit() {
 		}
 		for _, option := range val {
 			if option.State == robinhood.ORDER_STATE_CANCELLED {
-				continue
+				//continue
 			}
 			printJSON(option)
 		}
